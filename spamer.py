@@ -2,24 +2,42 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import smtplib
 
-msg = MIMEMultipart()
+import configparser
+import sys
 
-message = "Mass spam"
+arrayEmails = []
 
-password = "your_password"
-user = "your_username"
-msg['From'] = "name@mail.com"
-msg['To'] = "client@mail.com"
-msg['Subject'] = "Test subscription"
+try:
+	config = configparser.ConfigParser()
+	config.read("config.ini")
 
-msg.attach(MIMEText(message, 'plain'))
+	with open("emails.txt") as file:
+		arrayEmails = file.read().splitlines()
 
-server = smtplib.SMTP('mail.host.com: host_port')
-server.starttls()
-server.login(user, password)
+	msg = MIMEMultipart()
 
-server.sendmail(msg['From'], msg['To'], msg.as_string())
+	# config settings
+	username = config.get("Settings", "Username")
+	password = config.get("Settings", "Password")
+	msg['From'] = config.get("Settings", "EmailFrom")
+	msg['Subject'] = config.get("Settings", "Subject")
+	message = config.get("Settings", "Message")
+
+	msg.attach(MIMEText(message, 'plain'))
+
+	server = smtplib.SMTP(config.get("Settings", "Host") + ': ' + config.get("Settings", "Port"))
+	server.starttls()
+	server.login(username, password)
+
+except (KeyError, FileNotFoundError, smtplib.SMTPAuthenticationError) as e:
+	print(e)
+	sys.exit(0)
+except smtplib.SMTPConnectError:
+	print("SMTP Connect error!")
+	sys.exit(0)
+
+for email in arrayEmails:
+	server.sendmail(msg['From'], email, msg.as_string())
+	print("Successfully sent email to %s:" % (email))
 
 server.quit()
-
-print("successfully sent email to %s:" % (msg['To']))
