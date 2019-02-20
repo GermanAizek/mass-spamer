@@ -5,7 +5,14 @@ import smtplib
 import configparser
 import sys
 
+from threading import Thread
+
 arrayEmails = []
+threads = []
+
+def mthreadSend(email):
+	server.sendmail(msg['From'], email, msg.as_string())
+	print("Successfully sent email to %s:" % (email))
 
 try:
 	config = configparser.ConfigParser()
@@ -37,7 +44,11 @@ except smtplib.SMTPConnectError:
 	sys.exit(0)
 
 for email in arrayEmails:
-	server.sendmail(msg['From'], email, msg.as_string())
-	print("Successfully sent email to %s:" % (email))
+	thread = Thread(target=mthreadSend, args=(email,))
+	thread.start()
+	threads.append(thread)
+
+for t in threads:
+	t.join()
 
 server.quit()
