@@ -10,9 +10,13 @@ from threading import Thread
 arrayEmails = []
 threads = []
 
-def mthreadSend(email):
+def mthreadLoginSend(email, msg, username, password):
+	server = smtplib.SMTP(config.get("Settings", "Host") + ': ' + config.get("Settings", "Port"))
+	server.starttls()
+	server.login(username, password)
 	server.sendmail(msg['From'], email, msg.as_string())
 	print("Successfully sent email to %s:" % (email))
+	server.quit()
 
 try:
 	config = configparser.ConfigParser()
@@ -30,11 +34,11 @@ try:
 	msg['Subject'] = config.get("Settings", "Subject")
 	message = config.get("Settings", "Message")
 
-	msg.attach(MIMEText(message, 'plain'))
+	if ('.txt' in message or '.html' in message):
+		with open(message) as file:
+			message = file.read()
 
-	server = smtplib.SMTP(config.get("Settings", "Host") + ': ' + config.get("Settings", "Port"))
-	server.starttls()
-	server.login(username, password)
+	msg.attach(MIMEText(message, config.get("Settings", "TypeMessage")))
 
 except (KeyError, FileNotFoundError, smtplib.SMTPAuthenticationError) as e:
 	print(e)
@@ -44,11 +48,9 @@ except smtplib.SMTPConnectError:
 	sys.exit(0)
 
 for email in arrayEmails:
-	thread = Thread(target=mthreadSend, args=(email,))
+	thread = Thread(target=mthreadLoginSend, args=(email, msg, username, password))
 	thread.start()
 	threads.append(thread)
 
 for t in threads:
 	t.join()
-
-server.quit()
